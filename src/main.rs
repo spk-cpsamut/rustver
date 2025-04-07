@@ -3,6 +3,23 @@ use std::{
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
 };
+
+mod enums;
+use enums::http_methods::http_method;
+struct Request {
+    method: http_method,
+    endpoint: String,
+    version: String,
+}
+
+struct Candidate_request<'a, 'b> {
+    method: Option<http_method>,
+    endpoint: Option<&'a str>,
+    version: Option<&'b str>,
+}
+
+impl Candidate_request {}
+
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
 
@@ -39,19 +56,29 @@ fn handle_buffer(line: String) {
     }
 }
 
-fn handle_http_method_header(http_method: &str) {
+fn handle_http_method_header(http_method: &str) -> Candidate_request {
     let list = http_method.split(" ").collect::<Vec<&str>>();
 
-    let method = list[0];
+    let method = map_http_method(list[0]);
     let endpoint = list[1];
     let version = list[2];
 
-    print!("method: {:#?}", method);
-    print!("endpoint: {:#?}", endpoint);
-    print!("version: {:#?}", version);
+    Candidate_request {
+        method,
+        endpoint: Some(endpoint),
+        version: Some(version),
+    }
 }
 
-fn handle_header_properties(key: &str, val: &str) {
-    print!("key: {}", key);
-    print!("val: {}", val);
+fn handle_header_properties(key: &str, val: &str) {}
+
+fn map_http_method(method: &str) -> Option<http_method> {
+    match method {
+        "GET" => return Some(http_method::GET),
+        "POST" => return Some(http_method::POST),
+        "PUT" => return Some(http_method::PUT),
+        "DELETE" => return Some(http_method::DELETE),
+        "PATCH" => return Some(http_method::PATCH),
+        _ => return None,
+    }
 }
