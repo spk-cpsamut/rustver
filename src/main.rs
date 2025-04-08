@@ -12,13 +12,32 @@ struct Request {
     version: String,
 }
 
-struct Candidate_request<'a, 'b> {
+struct RequestBuilder<'a> {
     method: Option<http_method>,
     endpoint: Option<&'a str>,
-    version: Option<&'b str>,
+    version: Option<&'a str>,
 }
 
-impl Candidate_request {}
+impl<'a> RequestBuilder<'a> {
+    fn init() -> RequestBuilder<'a> {
+        RequestBuilder {
+            method: None,
+            endpoint: None,
+            version: None,
+        }
+    }
+
+    fn add_method(
+        &'a mut self,
+        method: Option<http_method>,
+        endpoint: Option<&'a str>,
+        version: Option<&'a str>,
+    ) {
+        self.method = method;
+        self.endpoint = endpoint;
+        self.version = version;
+    }
+}
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
@@ -49,25 +68,24 @@ fn handle_connection(mut stream: TcpStream) {
 
 fn handle_buffer(line: String) {
     let mut splited_line = line.split(":").collect::<Vec<&str>>();
-
+    let mut candidate_request = RequestBuilder::init();
     match splited_line.get(1) {
         Some(val) => handle_header_properties(splited_line.get(0).unwrap(), val),
-        None => handle_http_method_header(splited_line.get(0).unwrap()),
+        None => handle_http_method_header(splited_line.get(0).unwrap(), &mut candidate_request),
     }
 }
 
-fn handle_http_method_header(http_method: &str) -> Candidate_request {
+fn handle_http_method_header<'a>(
+    http_method: &'a str,
+    candidate_request: &'a mut RequestBuilder<'a>,
+) {
     let list = http_method.split(" ").collect::<Vec<&str>>();
 
     let method = map_http_method(list[0]);
-    let endpoint = list[1];
-    let version = list[2];
+    let endpoint = list.get(1).copied();
+    let version = list.get(2).copied();
 
-    Candidate_request {
-        method,
-        endpoint: Some(endpoint),
-        version: Some(version),
-    }
+    candidate_request.add_method(method, endpoint, version);
 }
 
 fn handle_header_properties(key: &str, val: &str) {}
