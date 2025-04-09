@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs,
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
@@ -10,12 +11,15 @@ struct Request {
     method: http_method,
     endpoint: String,
     version: String,
+    headers: HashMap<String, String>,
 }
 
+#[derive(Debug)]
 struct RequestBuilder<'a> {
     method: Option<http_method>,
     endpoint: Option<&'a str>,
     version: Option<&'a str>,
+    headers: HashMap<String, String>,
 }
 
 impl<'a> RequestBuilder<'a> {
@@ -24,6 +28,7 @@ impl<'a> RequestBuilder<'a> {
             method: None,
             endpoint: None,
             version: None,
+            headers: HashMap::new(),
         }
     }
 
@@ -37,6 +42,10 @@ impl<'a> RequestBuilder<'a> {
         self.endpoint = endpoint;
         self.version = version;
     }
+
+    fn add_header_property(&mut self, key: &str, val: &str) {
+        self.headers.insert(key.to_string(), val.to_string());
+    }
 }
 
 fn main() {
@@ -48,6 +57,18 @@ fn main() {
         handle_connection(st)
     }
     println!("Hello, world!");
+
+    let mut kaw = "hello".to_string();
+
+    tranfrom(&mut kaw);
+    tranfrom(&mut kaw);
+    tranfrom(&mut kaw);
+
+    print!("{}", kaw)
+}
+
+fn tranfrom(kaw: &mut String) {
+    kaw.insert(0, 'G')
 }
 
 fn handle_connection(mut stream: TcpStream) {
@@ -95,6 +116,7 @@ fn handle_header_properties<'a>(
     val: &str,
     candidate_request: &'a mut RequestBuilder<'a>,
 ) {
+    candidate_request.add_header_property(key, val);
 }
 
 fn map_http_method(method: &str) -> Option<http_method> {
