@@ -70,7 +70,9 @@ fn handle_buffer(line: String) {
     let mut splited_line = line.split(":").collect::<Vec<&str>>();
     let mut candidate_request = RequestBuilder::init();
     match splited_line.get(1) {
-        Some(val) => handle_header_properties(splited_line.get(0).unwrap(), val),
+        Some(val) => {
+            handle_header_properties(splited_line.get(0).unwrap(), val, &mut candidate_request)
+        }
         None => handle_http_method_header(splited_line.get(0).unwrap(), &mut candidate_request),
     }
 }
@@ -88,7 +90,12 @@ fn handle_http_method_header<'a>(
     candidate_request.add_method(method, endpoint, version);
 }
 
-fn handle_header_properties(key: &str, val: &str) {}
+fn handle_header_properties<'a>(
+    key: &str,
+    val: &str,
+    candidate_request: &'a mut RequestBuilder<'a>,
+) {
+}
 
 fn map_http_method(method: &str) -> Option<http_method> {
     match method {
