@@ -73,11 +73,13 @@ fn tranfrom(kaw: &mut String) {
 
 fn handle_connection(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&stream);
+    let mut candidate_request = RequestBuilder::init();
     buf_reader
         .lines()
         .map(|res| res.unwrap())
         .take_while(|line| !line.is_empty())
-        .for_each(|line| handle_buffer(line));
+        .reduce(|line, e: RequestBuilder| handle_buffer(line, &mut candidate_request));
+
     let content = fs::read_to_string("hello.html").unwrap();
 
     let status_line = "HTTP/1.1 200 OK";
@@ -87,15 +89,19 @@ fn handle_connection(mut stream: TcpStream) {
     stream.write_all(response.as_bytes()).unwrap()
 }
 
-fn handle_buffer(line: String) {
+fn handle_buffer<'a>(
+    line: String,
+    candidate_request: &'a mut RequestBuilder<'a>,
+) -> RequestBuilder {
     let mut splited_line = line.split(":").collect::<Vec<&str>>();
-    let mut candidate_request = RequestBuilder::init();
     match splited_line.get(1) {
         Some(val) => {
             handle_header_properties(splited_line.get(0).unwrap(), val, &mut candidate_request)
         }
         None => handle_http_method_header(splited_line.get(0).unwrap(), &mut candidate_request),
     }
+
+    candidate_request
 }
 
 fn handle_http_method_header<'a>(
