@@ -15,15 +15,15 @@ struct Request {
 }
 
 #[derive(Debug)]
-struct RequestBuilder<'a> {
+struct RequestBuilder {
     method: Option<http_method>,
-    endpoint: Option<&'a str>,
-    version: Option<&'a str>,
+    endpoint: Option<String>,
+    version: Option<String>,
     headers: HashMap<String, String>,
 }
 
-impl<'a> RequestBuilder<'a> {
-    fn init() -> RequestBuilder<'a> {
+impl RequestBuilder {
+    fn init() -> RequestBuilder {
         RequestBuilder {
             method: None,
             endpoint: None,
@@ -33,14 +33,14 @@ impl<'a> RequestBuilder<'a> {
     }
 
     fn add_method(
-        &'a mut self,
+        &mut self,
         method: Option<http_method>,
-        endpoint: Option<&'a str>,
-        version: Option<&'a str>,
+        endpoint: Option<&str>,
+        version: Option<&str>,
     ) {
         self.method = method;
-        self.endpoint = endpoint;
-        self.version = version;
+        self.endpoint = endpoint.and_then(|s| Some(s.to_string()));
+        self.version = version.and_then(|s| Some(s.to_string()));
     }
 
     fn add_header_property(&mut self, key: &str, val: &str) {
@@ -78,8 +78,9 @@ fn handle_connection(mut stream: TcpStream) {
         .lines()
         .map(|res| res.unwrap())
         .take_while(|line| !line.is_empty())
-        .reduce(|line, e: RequestBuilder| handle_buffer(line, &mut candidate_request));
+        .for_each(|line| handle_buffer(line, &mut candidate_request));
 
+    println!("{:?}", candidate_request);
     let content = fs::read_to_string("hello.html").unwrap();
 
     let status_line = "HTTP/1.1 200 OK";
@@ -89,39 +90,27 @@ fn handle_connection(mut stream: TcpStream) {
     stream.write_all(response.as_bytes()).unwrap()
 }
 
-fn handle_buffer<'a>(
-    line: String,
-    candidate_request: &'a mut RequestBuilder<'a>,
-) -> RequestBuilder {
-    let mut splited_line = line.split(":").collect::<Vec<&str>>();
+fn handle_buffer(line: String, candidate_request: &mut RequestBuilder) {
+    let splited_line = line.split(":").collect::<Vec<&str>>();
     match splited_line.get(1) {
         Some(val) => {
-            handle_header_properties(splited_line.get(0).unwrap(), val, &mut candidate_request)
+            handle_header_properties(splited_line.get(0).unwrap(), val, candidate_request);
         }
-        None => handle_http_method_header(splited_line.get(0).unwrap(), &mut candidate_request),
+        None => handle_http_method_header(splited_line.get(0).unwrap(), candidate_request),
     }
-
-    candidate_request
 }
 
-fn handle_http_method_header<'a>(
-    http_method: &'a str,
-    candidate_request: &'a mut RequestBuilder<'a>,
-) {
+fn handle_http_method_header(http_method: &str, candidate_request: &mut RequestBuilder) {
     let list = http_method.split(" ").collect::<Vec<&str>>();
 
-    let method = map_http_method(list[0]);
+    let method = map_http_method(&list[0]);
     let endpoint = list.get(1).copied();
     let version = list.get(2).copied();
 
     candidate_request.add_method(method, endpoint, version);
 }
 
-fn handle_header_properties<'a>(
-    key: &str,
-    val: &str,
-    candidate_request: &'a mut RequestBuilder<'a>,
-) {
+fn handle_header_properties(key: &str, val: &str, candidate_request: &mut RequestBuilder) {
     candidate_request.add_header_property(key, val);
 }
 
